@@ -1,0 +1,49 @@
+---
+- hosts: Web_Server
+  become: yes
+  become_user: root
+  tasks:
+
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+
+    - name: Start and enable Nginx service
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
+      retries: 3
+      delay: 5
+      register: nginx_status
+      until: nginx_status is succeeded
+
+    - name: Wait for Nginx to become responsive
+      ansible.builtin.wait_for:
+        port: 80
+        timeout: 60
+
+    - name: Check Nginx status
+      ansible.builtin.command: systemctl status nginx
+      register: nginx_status_output
+      failed_when: nginx_status_output.rc != 0
+      ignore_errors: true
+
+    - name: Display Nginx status output
+      ansible.builtin.debug:
+        msg: "{{ nginx_status_output.stdout_lines }}"
+
+  handlers:
+    - name: Reload systemd daemon
+      ansible.builtin.command: systemctl daemon-reload
+
+    - name: Pause before restarting Nginx
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Restart Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted

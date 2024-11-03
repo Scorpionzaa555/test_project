@@ -1,0 +1,7 @@
+---
+- name: Check connectivity to web server
+  hosts: Web_Server
+  gather_facts: no
+  tasks:
+    - name: Ping the host to verify connectivity
+      ansible.builtin.ping:

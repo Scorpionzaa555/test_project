@@ -1,0 +1,46 @@
+---
+- hosts: Web_Server
+  become: yes
+  become_user: root
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Check and restart Nginx if not running
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+      when: "'nginx' in ansible_facts.services and ansible_facts.services['nginx'].state != 'running'"
+      register: nginx_restart
+
+    - name: Display Nginx service status
+      ansible.builtin.debug:
+        msg: >
+          {% if 'nginx' in ansible_facts.services %}
+            Nginx service was {{ ansible_facts.services['nginx'].state }}.
+            {% if nginx_restart is defined and nginx_restart.changed %}
+              It has been restarted successfully.
+            {% else %}
+              No restart was needed.
+            {% endif %}
+          {% else %}
+            Nginx service not found on this host.
+          {% endif %}
+
+    - name: Verify Nginx HTTP response is 200
+      ansible.builtin.uri:
+        url: http://172.31.112.2:8080/
+        status_code: 200
+        return_content: no
+      register: nginx_http_response
+      when: "'nginx' in ansible_facts.services"
+
+    - name: Display HTTP response check result
+      ansible.builtin.debug:
+        msg: >
+          {% if nginx_http_response is defined %}
+            Nginx HTTP response status is {{ nginx_http_response.status }}.
+          {% else %}
+            HTTP response check skipped because Nginx service is not running or not installed.
+          {% endif %}

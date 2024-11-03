@@ -1,0 +1,9 @@
+---
+- hosts: Web_Server
+  become: yes
+  become_user: root
+  tasks:
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: dist
+      ignore_errors: yes
